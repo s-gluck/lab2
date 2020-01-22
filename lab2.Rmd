@@ -1,0 +1,151 @@
+---
+title: "Lab 2"
+author: "Stephanie Gluck"
+date: "1/15/2020"
+output: 
+  html_document: 
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+library(rio)
+library(tidyverse)
+library(ggplot2)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r read in data}
+
+d <- rio::import("https://github.com/fivethirtyeight/data/raw/master/alcohol-consumption/drinks.csv") 
+
+```
+
+###Histogram 
+
+Default histgram 
+
+```{r histogram}
+
+theme_set(theme_minimal())
+
+ggplot(d, aes(x = total_litres_of_pure_alcohol)) +
+  geom_histogram()
+
+```
+
+Histogram with bin = 18
+
+I selected the bin = 18 option as I wanted to demonstrate that overall there is quite a bit of variability in the data and it does not follow a normal ditribution for the total liters of alcohol comsumption in each country. While many countries consumed zero liters or less than 5 liters of alcohol as indicated by the slight positive skewness of the histogram, there are also a good amount of countries throughout the data that consumed a varied amount of alcohol.
+
+```{r histogram2}
+ggplot(d, aes(x = total_litres_of_pure_alcohol)) +
+  geom_histogram(fill = "seagreen4",
+                 color = "white",
+                 alpha = 0.9, 
+                 bins = 18)
+
+```
+
+
+###Density Plot 
+
+Default density plot
+```{r density}
+
+ggplot(d, aes(total_litres_of_pure_alcohol)) +
+  geom_density()
+
+```
+
+Density plot bw = 0.1
+```{r density3}
+
+ggplot(d, aes(total_litres_of_pure_alcohol)) +
+  geom_density(fill = "seagreen4", 
+               bw = 0.1)
+```
+
+Density plot bw = 0.4
+
+I seleted the bandwidth size of 0.4 because similar to the histogram, I wanted to capture the variability in the data to demonstrate that while a large number of countries consumed none or less than 5 liters of alcohol as shown by the slight positive skew of the density plot, there were also several countries with varied greater level of alcohol consumption. 
+
+```{r density2}
+
+ggplot(d, aes(total_litres_of_pure_alcohol)) +
+  geom_density(fill = "seagreen4", 
+               bw = 0.4)
+```
+
+##Data reorganization & Plotting 
+
+###Data reorganization 
+```{r long data}
+
+d_long <- d %>%
+  pivot_longer(2:4, 
+               names_to = "type", 
+               values_to = "servings")
+
+head(d_long)
+
+```
+
+###Plotting the distribution of servings by type
+
+Visual inspection of the three plots revealed that for most people in the world, alcohol (beer, spirit, wine) consumption was less than 100 servings consumed per person (the boxplot showed an average servings of around 70, 65, and 10 for beer, spirit and wine respectively), with many people consuming zero amount of alcohol as demonstrated by the large clusters of dots in the lower portion of the sina plot. The histogram demonstrated that wine was the least consumed type of alcohol in the world (perhaps less readily available or accessible in some parts of the world) with the most zero servings compared to beer and spirit. Also, both the box and sina plot shows outlier countires with consumptions as great as 300+ servings and even one country with 400+ servings of alcohol (spirit specifically for 400+). 
+
+
+```{r visualize long data}
+
+#Box plot 
+ggplot(d_long, aes(type, servings)) +
+  geom_boxplot(fill = "seagreen4")
+
+#Sina plot 
+ggplot(d_long, aes(type, servings)) +
+  ggforce::geom_sina()
+
+#Histogram 
+ggplot(d_long, aes(servings)) +
+  geom_histogram(fill = "seagreen4",
+                 color = "white",
+                 alpha = 0.9,
+                 bins = 15) +
+  facet_wrap(~type)
+
+```
+
+###Reproduce Plot
+```{r reproduce plot, fig.width = 8,fig.height = 8}
+
+top_25_country <- d_long %>% 
+  top_n(75, wt = total_litres_of_pure_alcohol) %>% 
+  group_by(country) %>% 
+  mutate(sum_servings = sum(servings)) %>% 
+  mutate(prop = servings/sum_servings)
+
+color_palette <- c("#dfb409", "#84c3ce", "#7570B3")
+
+ggplot(top_25_country, aes(country, prop)) +
+  geom_col(aes(fill = type)) +
+  coord_flip() + 
+  guides(fill = guide_legend(reverse = TRUE)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_fill_manual(values = color_palette, 
+                    name = "Alcohol Type", 
+                    labels = c("Beer", "Spirit", "Wine")) + 
+  labs(x = "",
+       y = "Proportion of total alcohol consumed",
+       title = "Alcohol consumption by type",
+       subtitle = "Top 25 countries displayed (according to total liters consumed)") +
+  theme(axis.ticks = element_blank(), 
+      panel.border = element_blank(), 
+      plot.title = element_text(size = 20), 
+      legend.position = "bottom", 
+      legend.justification = "right", 
+      plot.margin = margin(5, 10, 5, 0))
+
+```
+
